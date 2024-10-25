@@ -482,7 +482,7 @@ def self_play(mcts, env, replay_buffer, device, temperature):
             try:
                 expression_obj = parse_expression_from_string(final_expression)
                 ic = evaluate_expression_ic(expression_obj)
-                ic = abs(ic)
+                #此行疑似有问题，暂且去掉 ic = abs(ic)
                 logging.info(f"生成的因子表达式已评估，IC: {ic:.4f}")
             except Exception as e:
                 ic = 0.0
