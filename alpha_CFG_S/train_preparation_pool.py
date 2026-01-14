@@ -1,0 +1,425 @@
+# train_preparation.py
+
+import math
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.multiprocessing as mp
+
+import copy
+import os
+import random
+import numpy as np
+import pandas as pd
+import json
+import csv
+import logging
+from collections import deque
+from functools import partial
+
+from torch.nn.utils.rnn import pad_sequence  # <-- Used for padding
+
+from mcts import MCTS, Node
+from networks.policy_ import PolicyNetwork, evaluate_policy_network, ACTION_MAP, CATEGORY_MAP
+from networks.value_ import ValueNetwork, evaluate_expression_value
+from env.alpha_env import AlphaEnv
+from env.token_v import create_token_map, parse_expression_to_tokens, get_first_token
+from data.evaluator_ import *
+from data.calculator__ import *
+#from models.linear_alpha_pool import MseAlphaPool
+from networks.feature_ import FeatureExtractor
+
+# Set the multiprocessing start method to 'spawn'
+mp.set_start_method('spawn', force=True)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
+#####################################
+#           ReplayBuffer            #
+#####################################
+class ReplayBuffer:
+    def __init__(self, capacity):
+        self.buffer = deque(maxlen=capacity)
+        self.current_index = 0  # Starting position for sequential sampling
+
+    def push(self, expression, action_probs_list, value):
+        """
+        Store data in the buffer
+        """
+        self.buffer.append((expression, action_probs_list, value))
+    
+    def sample(self, batch_size):
+        """
+        Random sampling: randomly select batch_size items from the buffer.
+        When there are fewer than batch_size items, use replacement sampling to ensure batch_size items are returned.
+        """
+        if len(self.buffer) == 0:
+            return []
+        buffer_list = list(self.buffer)
+        if len(buffer_list) < batch_size:
+            return random.choices(buffer_list, k=batch_size)
+        else:
+            return random.sample(buffer_list, batch_size)
+
+    def __len__(self):
+        return len(self.buffer)
+
+
+#####################################
+#     mcts_policy_to_target         #
+#####################################
+def mcts_policy_to_target(action_probs_dict):
+    """
+    Convert the MCTS-generated action probability dictionary {('unaryop','Abs'): p, ...}
+    to [{'category': c, 'action': a, 'prob': p}, ...]
+    Only add actions with existing probabilities, skip those without.
+    """
+    target_policy = []
+    for category, actions in ACTION_MAP.items():
+        for action in actions:
+            if (category, action) in action_probs_dict:
+                prob = action_probs_dict[(category, action)]
+                target_policy.append({
+                    'category': category,
+                    'action': action,
+                    'prob': prob
+                })
+    return target_policy 
+
+#####################################
+#     compute_policy_loss           #
+#####################################
+def compute_policy_loss(action_outputs, target_policy, classification_loss_fn, device):
+    """
+    Calculate the KL divergence loss between the policy network output and the target policy
+    """
+    num_categories = action_outputs.shape[0]
+    target_distribution = torch.zeros(num_categories, device=device)
+
+    category_idx = 0
+    for category, actions in ACTION_MAP.items():
+        for action in actions:
+            if category_idx >= num_categories:
+                break
+            prob = next((item['prob'] for item in target_policy
+                         if item['category'] == category and item['action'] == action), 0.0)
+            target_distribution[category_idx] = prob
+            category_idx += 1
+
+    # Normalize the target distribution
+    if target_distribution.sum() > 0:
+        target_distribution /= target_distribution.sum()
+
+    # Apply softmax to the network output
+    output_distribution = torch.softmax(action_outputs, dim=0)
+
+    # Calculate KL divergence
+    loss = classification_loss_fn(torch.log(output_distribution + 1e-10), target_distribution)
+    return loss
+
+
+#####################################
+#        Sequential batch training - policy      #
+#####################################
+def train_policy_net(policy_net, optimizer, replay_buffer, num_batches, batch_size, device):
+    """
+    1. Sequentially sample batch_size items (until the buffer is exhausted).
+    2. Perform padding to align states.
+    3. Forward pass, calculate loss and backpropagate.
+    """
+    policy_net.train()
+    classification_loss_fn = nn.KLDivLoss(reduction='batchmean')
+    total_policy_loss = 0.0
+    valid_samples = 0
+
+    num_data = len(replay_buffer)
+    if num_data == 0:
+        return 0.0
+
+    for _ in range(num_batches):
+        batch_data = replay_buffer.sample(batch_size)
+        if not batch_data:
+            continue
+
+        # Split out states, action_probs_list, values, expressions
+        expressions, action_probs_list, _ = zip(*batch_data)
+
+        # Calculate loss for all data in the batch at once
+        optimizer.zero_grad()
+        policy_loss = torch.tensor(0.0, device=device, requires_grad=True)
+
+        for i in range(len(batch_data)):
+            # Target policy for the current sample
+            target_policy = action_probs_list[i]
+            if not target_policy:
+                continue
+
+            tokens = parse_expression_to_tokens(expressions[i], create_token_map())
+            first_token = get_first_token(tokens, create_token_map())
+            if first_token is None:
+                continue
+
+            action_outputs = policy_net(expressions[i], first_token=first_token)
+            if action_outputs is None:
+                continue
+
+            # Convert to differentiable vector
+            action_outputs = torch.tensor(
+                [item['prob'] for item in action_outputs],
+                dtype=torch.float32, device=device, requires_grad=True
+            )
+
+            loss = compute_policy_loss(action_outputs, target_policy, classification_loss_fn, device)
+            policy_loss = policy_loss + loss
+
+        if policy_loss.requires_grad:
+            policy_loss.backward()
+            optimizer.step()
+            total_policy_loss += policy_loss.item()
+            valid_samples += 1
+
+    avg_policy_loss = total_policy_loss / valid_samples if valid_samples > 0 else 0.0
+    return avg_policy_loss
+
+#####################################
+#        Sequential batch training - value       #
+#####################################
+def train_value_net(value_net, optimizer, replay_buffer, num_batches, batch_size, device):
+    """
+    1. Sequentially sample batch_size items (until the buffer is exhausted).
+    2. For each sample, pass the expression (string) individually for forward pass,
+       calculate mean squared error and accumulate loss, then perform backpropagation and parameter update.
+    """
+    value_net.train()
+    regression_loss_fn = nn.MSELoss()
+    total_value_loss = 0.0
+    total_samples = 0
+
+    num_data = len(replay_buffer)
+    if num_data == 0:
+        return 0.0
+
+    for _ in range(num_batches):
+        batch_data = replay_buffer.sample(batch_size)
+        if not batch_data:
+            continue
+
+        # Split out states, action_probs_list, values, expressions
+        # States are no longer used as the network only depends on the expression
+        expressions, _, values= zip(*batch_data)
+
+        optimizer.zero_grad()
+        batch_loss = 0.0
+
+        # Calculate for each sample in the batch individually
+        for i in range(len(batch_data)):
+            target_value = values[i]  # Target value, usually a scalar
+
+            # Forward pass for a single sample
+            output = value_net(expressions[i]).squeeze(-1)
+            # Convert target value to tensor
+            target_tensor = torch.tensor(target_value, dtype=torch.float32, device=device).unsqueeze(0)
+            # Calculate mean squared error loss
+            sample_loss = regression_loss_fn(output, target_tensor)
+            # Accumulate loss for each sample
+            batch_loss += sample_loss
+
+        # Perform backpropagation and parameter update for the accumulated batch loss
+        batch_loss.backward()
+        optimizer.step()
+
+        total_value_loss += batch_loss.item()
+        total_samples += len(batch_data)  # Use the actual number of samples in the batch
+
+    avg_value_loss = total_value_loss / total_samples if total_samples > 0 else 0.0
+    return avg_value_loss
+
+
+
+#####################################
+#         Self-play & Parallel related       #
+#####################################
+def self_play_game(policy_net, value_net, LEN, MCTS_SIM, MCTS_PARALLEL, BATCH_SIZE_EVAL, device=torch.device('cpu')):
+    """
+    Use the current policy network, value network, and MCTS to play against itself, 
+    returning all step data for the game.
+    """
+    mcts = MCTS(policy_net, value_net, MCTS_SIM, MCTS_PARALLEL, BATCH_SIZE_EVAL, device)
+    game_data = []  # (state_tensor, action_probs, current_expression, reached_terminal, final_state)
+
+    length = 0
+
+    while (not mcts.root.state.is_terminal_state()) and length <= (LEN - 1):
+        current_expression = mcts.root.state.state_description()
+        coef = 1
+        final_probas, _ = mcts.search(competitive=False, c_puct=1, temperature=1)
+        game_data.append((final_probas, current_expression, coef, False, mcts.root.state))
+        length += 1
+
+    # If terminal state is reached, set reached_terminal to True
+    if mcts.root.state.is_terminal_state():
+        for idx in range(len(game_data)):
+            game_data[idx] = (
+                game_data[idx][0],      # final_probas
+                game_data[idx][1],      # current_expression
+                game_data[idx][2],      # coef
+                True,                   # Set reached_terminal to True
+                mcts.root.state         # final_state
+            )
+        
+        # 2-b Then separately append a "terminal" step  ### NEW
+        # ---------- 2. Generate terminal probas, for placeholder ----------
+        first_probas = game_data[0][0]
+
+        if torch.is_tensor(first_probas):                      # Tensor
+            term_probas = torch.zeros_like(first_probas)
+
+        elif isinstance(first_probas, np.ndarray):             # numpy array
+            term_probas = np.zeros_like(first_probas)
+
+        elif isinstance(first_probas, dict):                   # dict {action: p}
+            term_probas = {k: 0.0 for k in first_probas}       # All zeros
+
+        else:
+            raise TypeError(f"Unsupported probas type: {type(first_probas)}")
+        terminal_expr = mcts.root.state.state_description()
+        coef = 1
+        game_data.append((term_probas, terminal_expr, coef,
+                          True, mcts.root.state))
+
+    return game_data
+
+def run_self_play(args):
+    (policy_net, value_net, LEN, MCTS_SIM, MCTS_PARALLEL, BATCH_SIZE_EVAL, device, seed) = args
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if device.type == 'cuda':
+        torch.cuda.manual_seed_all(seed)
+
+    return self_play_game(policy_net, value_net, LEN, MCTS_SIM, MCTS_PARALLEL, BATCH_SIZE_EVAL, device)
+
+def init_pool(*args):
+    pass
+
+def parallel_self_play(policy_net, value_net, LEN, num_games, MCTS_SIM, MCTS_PARALLEL, BATCH_SIZE_EVAL, device, num_workers):
+    seeds = [random.randint(0, 1e8) for _ in range(num_games)]
+    args_list = [(policy_net, value_net, LEN, MCTS_SIM, MCTS_PARALLEL, BATCH_SIZE_EVAL, device, s) for s in seeds]
+
+    mp.set_start_method('spawn', force=True)
+    with mp.Pool(processes=num_workers, initializer=partial(init_pool, device)) as pool:
+        results = pool.map(partial(run_self_play), args_list)
+    return results
+
+
+#####################################
+#   process_game_data_and_calculate_rewards
+#####################################
+def process_game_data_and_calculate_rewards(all_game_data, replay_buffer, file, pool, logo=False):
+    """
+    Collect self-play game_data, calculate final rewards and store in ReplayBuffer.
+    """
+
+    for game in all_game_data:
+        final_ic = 0
+        final_expression = None
+        
+        # Find the terminal state again, update final_expression and final_ic
+        for step in reversed(game):
+            if step[-2]:  # reached_terminal=True
+                final_expression = parse_expression_from_string(step[-1].state_description())
+                try:
+                    # Update coef for all steps
+                    for idx in range(len(game)):
+                        step = list(game[idx])
+                        state_str = step[-4]
+                        step[-3] = 1 - pool.compute_avg_similarity_with_pool(state_str)
+                        game[idx] = tuple(step)
+                            
+                    pool.try_new_expr(final_expression)
+                    final_ic = pool.evaluate_ensemble()
+                    if final_ic < 0:
+                        final_ic = 0
+                    logger.info(f"{final_expression},{final_ic}")     
+                except OutOfDataRangeError:
+                    final_ic = 0
+                break
+
+
+        # Record
+        if final_expression is not None:
+            # When saving to the buffer, each step's coef is the latest updated value
+            for step_idx, step in enumerate(game):
+                raw_pi, current_expression, coef, _, _ = step
+                reward = final_ic * coef
+                target_policy = mcts_policy_to_target(raw_pi)
+                replay_buffer.push(current_expression, target_policy, reward)
+                if logo:
+                    with open(file, 'a', newline='', encoding='utf-8') as f:
+                        writer = csv.writer(f)
+                        writer.writerow([
+                            target_policy,
+                            reward,
+                            current_expression,
+                            final_expression,
+                            coef
+                        ])
+
+
+#####################################
+#   process_game_data_and_calculate_single_rewards
+#####################################
+def process_game_data_and_calculate_single_rewards(all_game_data, replay_buffer, file, pool, logo=False):
+    """
+    Collect self-play game_data, calculate final rewards and store in ReplayBuffer.
+    """
+
+    for game in all_game_data:
+        final_ic = 0
+        final_expression = None
+        
+        # Find the terminal state again, update final_expression and final_ic
+        for step in reversed(game):
+            if step[-2]:  # reached_terminal=True
+                final_expression = parse_expression_from_string(step[-1].state_description())
+                try:
+                    # Update coef for all steps
+                    for idx in range(len(game)):
+                        step = list(game[idx])
+                        state_str = step[-5]
+                        step[-4] = 1 - pool.compute_avg_similarity_with_pool(state_str)
+                        game[idx] = tuple(step)
+                            
+                    pool.try_new_expr(final_expression)
+                    final_ic = pool.evaluate_ensemble()
+                    if final_ic < 0:
+                        final_ic = 0
+                    logger.info(f"{final_expression},{final_ic}")     
+                except OutOfDataRangeError:
+                    final_ic = 0
+                    logger.info(f"{final_expression},{final_ic}")  
+                break
+
+
+        # Record
+        if final_expression is not None:
+            # When saving to the buffer, each step's coef is the latest updated value
+            for step_idx, step in enumerate(game):
+                raw_pi, current_expression, coef, continue_out_game , _, _ = step
+                reward = final_ic 
+                target_policy = mcts_policy_to_target(raw_pi)
+                replay_buffer.push(current_expression, target_policy, reward, continue_out_game)
+                if logo:
+                    with open(file, 'a', newline='', encoding='utf-8') as f:
+                        writer = csv.writer(f)
+                        writer.writerow([
+                            target_policy,
+                            reward,
+                            current_expression,
+                            final_expression,
+                            coef,
+                            continue_out_game
+                        ])
