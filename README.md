@@ -1,29 +1,103 @@
-# AlphaQCM
-Implementation of "AlphaQCM: Alpha Discovery in Finance with Distributional Reinforcement Learning."
+# Alpha Discovery via Grammar-Guided Learning and Search
 
-### Environment
+## Project Overview
 
-Requirements: Python 3.8, PyTorch 1.13.1, CUDA 11.6, and other dependencies. Please see alphaqcm_env.yml for more details.
+This project is a Python-based integrated analysis toolkit designed for quantitative trading, data backtesting, and strategy research. It is built upon the theory of formal languages and consists of four hierarchical language processing modules, each corresponding to a different level of expression validity.
 
-### Data Preparation
+## Theoretical Framework
 
-In line with [AlphaGen](https://github.com/RL-MLDM/alphagen/tree/master), we utilize the [Qlib](https://github.com/microsoft/qlib#data-preparation) and [baostock](http://baostock.com/baostock) libraries to prepare locally stored stock data. After installing Qlib and baostock, run the script `data_collection/fetch_baostock_data.py` to download the data.
+Our system is built on a nested language hierarchy:
 
-### Running Experiments
+* The set of all possible expressions
+* The set of syntactically valid expressions
+* The set of semantically valid expressions
+* The set of semantically valid expressions with length not exceeding K 
 
-Configure the agent's hyperparameters in `qcm_config` and execute the following scripts to reproduce the results for AlphaQCM methods:
+## Core Modules
+
+### 1. CFG-S
+
+**Corresponding language level:**
+
+A base Context-Free Grammar (CFG) parser responsible for filtering out syntactically correct expressions from all possible expressions, forming the syntactically valid language.
+
+### 2. CFG-SS
+
+**Corresponding language level:**
+
+An enhanced version built on CFG-S, introducing semantic constraints and state management. It further filters syntactically correct expressions to obtain semantically meaningful expressions, forming the semantically valid language.
+
+### 3. CFG-SSL
+
+**Corresponding language level:**
+
+A module that integrates complex syntax parsing with learning capabilities. It imposes a length constraint on semantically valid expressions, generating optimized expressions whose length does not exceed K.
+
+### 4. RPN
+
+A Reverse Polish Notation (RPN) calculator, used as a baseline or reference module.
+
+## Environment Setup and Installation
+
+### Prerequisites
+
+* Python 3.8–3.11 (Python 3.9 or 3.10 recommended)
+* pip (Python package manager)
+
+### Installation Steps
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone <your-repo-url>
+   cd alpha-discovery-via-grammar-guided-learning-and-search
+   ```
+2. **Create a virtual environment:**
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/macOS
+   # or
+   .\venv\Scripts\activate   # Windows
+   ```
+3. **Install dependencies:**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Verify the installation:**
+
+   ```bash
+   python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
+   ```
+
+## Running the Project
+
+To execute the integrated module pool, run:
+
 ```bash
-python train_qcm_csi300.py --model [qrdqn, iqn] --pool [10, 20, 50, 100] --std-lam [0.5, 1.0, 2.0]
-python train_qcm_csi500.py --model [qrdqn, iqn] --pool [10, 20, 50, 100] --std-lam [0.5, 1.0, 2.0]
-python train_qcm.py --model [qrdqn, iqn] --pool [10, 20, 50, 100] --std-lam [0.5, 1.0, 2.0]
+python run_pool.py
 ```
 
-The generated alpha pools are saved as human-readable CSV files. For additional baseline methods, refer to the code in [AlphaGen](https://github.com/RL-MLDM/alphagen/tree/master).
+## Project Structure
 
-### Acknowledgements
+```
+.
+├── CFG-S/             # Syntax-validity processing engine
+├── CFG-SS/            # + Semantic-validity processing engine
+├── CFG-SSL/           # + Constraint-optimized processing engine
+├── RPN/               # Reverse Polish Notation calculator
+├── requirements.txt   # Project dependencies
+└── README.md          # Project documentation
+```
 
-This project is built upon [AlphaGen](https://github.com/RL-MLDM/alphagen/tree/master) and [qf-iqn-qrdqn.pytorch](https://github.com/toshikwa/fqf-iqn-qrdqn.pytorch). AlphaGen provides the alpha discovery environment, while qf-iqn-qrdqn.pytorch supports the distributional RL agent. We thank the contributors of these repositories.
+## Notes
 
-### Contact
+* Installation may take some time — ensure a stable network connection.
+* The project depends on large libraries such as PyTorch and TensorFlow — ensure sufficient disk space.
+* For CUDA-related issues, please verify GPU driver and CUDA version compatibility.
 
-Please feel free to raise an issue in this GitHub repository or email me if you have any questions or encounter any issues.
+## Support
+
+If you encounter any issues, please submit an issue on GitHub or contact the development team.
+
