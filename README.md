@@ -71,6 +71,8 @@ A Reverse Polish Notation (RPN) calculator, used as a baseline or reference modu
    python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
    ```
 
+## Data Preparation
+
 ## Running the Project
 
 To execute the integrated module pool, run:
