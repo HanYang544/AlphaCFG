@@ -79,14 +79,21 @@ A Reverse Polish Notation (RPN) calculator, used as a baseline or reference modu
 
 ## Data Preparation
 
-You can obtain the required data using one of the following approaches.
+You can obtain the required stock data using one of the following approaches.
 
-### Option 1: Use Built-in Script (Recommended)
+### Option 1: Using a Built-in Script (Recommended)
 
 Run the built-in script to automatically fetch and preprocess data using **Baostock**:
 
 ```bash
 python alphagen/data_collection/fetch_baostock_data.py
+
+### Option 2: Use Qlib’s Data Pipeline (Optional)
+
+Alternatively, you may leverage Qlib for more flexible and large-scale financial data handling.
+
+GitHub repository:
+https://github.com/microsoft/qlib
 
 
 ## Running the Project
