@@ -99,7 +99,13 @@ https://github.com/microsoft/qlib
 
 ## Running the Project
 
-To execute the integrated module pool, run:
+To execute the integrated module pool, just enter the folder directory of different projects. For example:
+
+```bash
+cd ~/CFG-S
+```
+
+and run:
 
 ```bash
 python run_pool.py
