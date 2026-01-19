@@ -87,6 +87,7 @@ Run the built-in script to automatically fetch and preprocess data using **Baost
 
 ```bash
 python alphagen/data_collection/fetch_baostock_data.py
+```
 
 ### Option 2: Use Qlib’s Data Pipeline (Optional)
 
