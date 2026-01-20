@@ -58,7 +58,7 @@ You can obtain the required stock data using one of the following approaches.
 
 ### Option 1: Using a Built-in Script (Recommended)
 
-Run the built-in script to automatically fetch and preprocess data using **Baostock**:
+Run the built-in script of [AlphaGen](https://github.com/microsoft/AlphaGen) to automatically fetch and preprocess data using **Baostock**:
 
 ```bash
 python alphagen/data_collection/fetch_baostock_data.py
@@ -66,11 +66,7 @@ python alphagen/data_collection/fetch_baostock_data.py
 
 ### Option 2: Use Qlib’s Data Pipeline (Optional)
 
-Alternatively, you may leverage Qlib for more flexible and large-scale financial data handling.
-
-GitHub repository:
-https://github.com/microsoft/qlib
-
+Alternatively, you may leverage Qlib [qlib](https://github.com/microsoft/qlib) for more flexible and large-scale financial data handling.
 
 ## Running the Project
 
