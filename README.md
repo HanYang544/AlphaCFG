@@ -1,45 +1,20 @@
-# Alpha Discovery via Grammar-Guided Learning and Search
+# Implementation of "Alpha Discovery via Grammar-Guided Learning and Search"
 
 ## Project Overview
 
 This project is a Python-based integrated analysis toolkit designed for quantitative trading, data backtesting, and strategy research. It is built upon the theory of formal languages and consists of four hierarchical language processing modules, each corresponding to a different level of expression validity.
 
-## Theoretical Framework
+## Project Structure
 
-Our system is built on a nested language hierarchy:
-
-• The set of all possible expressions
-
-• The set of syntactically valid expressions
-
-• The set of semantically valid expressions
-
-• The set of semantically valid expressions with length not exceeding K 
-
-
-## Core Modules
-
-### 1. CFG-S
-
-Corresponding language level:
-
-A base Context-Free Grammar (CFG) parser responsible for filtering out syntactically correct expressions from all possible expressions, forming the syntactically valid language.
-
-### 2. CFG-SS
-
-Corresponding language level:
-
-An enhanced version built on CFG-S, introducing semantic constraints and state management. It further filters syntactically correct expressions to obtain semantically meaningful expressions, forming the semantically valid language.
-
-### 3. CFG-SSL
-
-Corresponding language level:
-
-A module that integrates complex syntax parsing with learning capabilities. It imposes a length constraint on semantically valid expressions, generating optimized expressions whose length does not exceed K.
-
-### 4. RPN
-
-A Reverse Polish Notation (RPN) calculator, used as a baseline or reference module.
+```
+.
+├── alpha-CFG-S/             # Syntax-validity processing engine
+├── alpha-CFG-SS/            # + Semantic-validity processing engine
+├── alpha-CFG-SSL/           # + Constraint-optimized processing engine
+├── alpha-RPN/               # Reverse Polish Notation calculator
+├── requirements.txt   # Project dependencies
+└── README.md          # Project documentation
+```
 
 ## Environment Setup and Installation
 
@@ -109,18 +84,6 @@ and run:
 
 ```bash
 python run_pool.py
-```
-
-## Project Structure
-
-```
-.
-├── alpha-CFG-S/             # Syntax-validity processing engine
-├── alpha-CFG-SS/            # + Semantic-validity processing engine
-├── alpha-CFG-SSL/           # + Constraint-optimized processing engine
-├── alpha-RPN/               # Reverse Polish Notation calculator
-├── requirements.txt   # Project dependencies
-└── README.md          # Project documentation
 ```
 
 ## Notes
