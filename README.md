@@ -1,9 +1,5 @@
 # Implementation of "Alpha Discovery via Grammar-Guided Learning and Search"
 
-## Project Overview
-
-This project is a Python-based integrated analysis toolkit designed for quantitative trading, data backtesting, and strategy research. It is built upon the theory of formal languages and consists of four hierarchical language processing modules, each corresponding to a different level of expression validity.
-
 ## Project Structure
 
 ```
@@ -12,6 +8,7 @@ This project is a Python-based integrated analysis toolkit designed for quantita
 ├── alpha-CFG-SS/            # + Semantic-validity processing engine
 ├── alpha-CFG-SSL/           # + Constraint-optimized processing engine
 ├── alpha-RPN/               # Reverse Polish Notation calculator
+├── alpha-ML/               # Baseline methods that directly use machine learning techniques to predict stocks
 ├── requirements.txt   # Project dependencies
 └── README.md          # Project documentation
 ```
