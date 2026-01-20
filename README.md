@@ -102,7 +102,7 @@ https://github.com/microsoft/qlib
 To execute the integrated module pool, just enter the folder directory of different projects. For example:
 
 ```bash
-cd ~/CFG-S
+cd alpha-CFG-S
 ```
 
 and run:
@@ -115,10 +115,10 @@ python run_pool.py
 
 ```
 .
-├── CFG-S/             # Syntax-validity processing engine
-├── CFG-SS/            # + Semantic-validity processing engine
-├── CFG-SSL/           # + Constraint-optimized processing engine
-├── RPN/               # Reverse Polish Notation calculator
+├── alpha-CFG-S/             # Syntax-validity processing engine
+├── alpha-CFG-SS/            # + Semantic-validity processing engine
+├── alpha-CFG-SSL/           # + Constraint-optimized processing engine
+├── alpha-RPN/               # Reverse Polish Notation calculator
 ├── requirements.txt   # Project dependencies
 └── README.md          # Project documentation
 ```
