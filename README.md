@@ -63,7 +63,7 @@ python alphagen/data_collection/fetch_baostock_data.py
 
 ### Option 2: Use Qlib’s Data Pipeline (Optional)
 
-Alternatively, you may leverage Qlib [qlib](https://github.com/microsoft/qlib) for more flexible and large-scale financial data handling.
+Alternatively, you may leverage [qlib](https://github.com/microsoft/qlib) for more flexible and large-scale financial data handling.
 
 ## Running the Project
 
@@ -85,7 +85,7 @@ This project includes several representative baseline methods for comparison.
 
 - **AlphaGen**: [AlphaGen](https://github.com/microsoft/AlphaGen)
 
-- **AlphaQCM**: [AlphaGen](https://github.com/microsoft/AlphaGen)
+- **AlphaQCM**: [AlphaQCM](https://github.com/microsoft/AlphaQCM)
 
 - **Alpha-ML**: Pure machine learning baselines that directly predict stock returns without explicit symbolic alpha construction.  
   To run these baselines, execute:
