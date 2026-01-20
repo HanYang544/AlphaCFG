@@ -85,7 +85,7 @@ This project includes several representative baseline methods for comparison.
 
 - **AlphaGen**: [AlphaGen](https://github.com/RL-MLDM/alphagen)
 
-- **AlphaQCM**: [AlphaQCM](https://github.com/ZhuZhouFan/AlphaQCM))
+- **AlphaQCM**: [AlphaQCM](https://github.com/ZhuZhouFan/AlphaQCM)
 
 - **Alpha-ML**: Pure machine learning baselines that directly predict stock returns without explicit symbolic alpha construction.  
   To run these baselines, execute:
