@@ -79,6 +79,21 @@ and run:
 python run_pool.py
 ```
 
+## Baseline Methods
+
+This project includes several representative baseline methods for comparison.
+
+- **AlphaGen**: [AlphaGen](https://github.com/microsoft/AlphaGen)
+
+- **AlphaQCM**: [AlphaGen](https://github.com/microsoft/AlphaGen)
+
+- **Alpha-ML**: Pure machine learning baselines that directly predict stock returns without explicit symbolic alpha construction.  
+  To run these baselines, execute:
+  ```bash
+  cd alpha-ML
+  python main.py
+
+
 ## Notes
 
 • Installation may take some time — ensure a stable network connection.
