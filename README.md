@@ -92,7 +92,7 @@ This project includes several representative baseline methods for comparison.
   ```bash
   cd alpha-ML
   python main.py
-
+  ```
 
 ## Notes
 
