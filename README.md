@@ -14,7 +14,7 @@
 ```
 
 ## Overview of Our Project
-The framework is shown below ![FRAME](AlphaCFG.png)
+The framework is shown below. ![FRAME](AlphaCFG.png)
 
 ## Environment Setup and Installation
 
@@ -96,7 +96,10 @@ This project includes several representative baseline methods for comparison.
   cd alpha-ML
   python main.py
   ```
-![Result](Result.png)
+
+## Result
+
+The result of backtest is shown below. ![Result](Result.png)
 
 ## Notes
 
