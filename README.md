@@ -13,6 +13,8 @@
 └── README.md          # Project documentation
 ```
 
+![FRAME](AlphaCFG.png)
+
 ## Environment Setup and Installation
 
 ### Prerequisites
