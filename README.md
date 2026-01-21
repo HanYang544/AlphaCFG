@@ -13,7 +13,8 @@
 └── README.md          # Project documentation
 ```
 
-![FRAME](AlphaCFG.png)
+## Overview of Our Project
+The framework is shown below ![FRAME](AlphaCFG.png)
 
 ## Environment Setup and Installation
 
