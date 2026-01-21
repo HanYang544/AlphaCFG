@@ -14,7 +14,7 @@
 ```
 
 ## Overview of Our Project
-The framework is shown below. ![FRAME](AlphaCFG.png)
+The framework is shown below. ![FRAME](figure/AlphaCFG.png)
 
 ## Environment Setup and Installation
 
@@ -99,7 +99,7 @@ This project includes several representative baseline methods for comparison.
 
 ## Result
 
-The result of backtest is shown below. ![Result](Result.png)
+The result of backtest is shown below. ![Result](figure/Result.pdf)
 
 ## Notes
 
