@@ -15,10 +15,7 @@
 
 ## Overview of Our Project
 The framework is shown below.
-
-<p align="center">
-  <img src="figure/AlphaCFG.png" alt="AlphaCFG Framework" width="1500">
-</p>
+![Result](figure/AlphaCFG.png)
 
 
 ## Environment Setup and Installation
@@ -104,7 +101,7 @@ This project includes several representative baseline methods for comparison.
 
 ## Result
 
-The result of backtest is shown below. ![Result](figure/Result.svg)
+The result of backtest is shown below. ![Result](figure/Result.png)
 
 ## Notes
 
