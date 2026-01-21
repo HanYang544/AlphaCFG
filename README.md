@@ -14,7 +14,12 @@
 ```
 
 ## Overview of Our Project
-The framework is shown below. ![FRAME](figure/AlphaCFG.png)
+The framework is shown below.
+
+<p align="center">
+  <img src="figure/AlphaCFG.png" alt="AlphaCFG Framework" width="900">
+</p>
+
 
 ## Environment Setup and Installation
 
