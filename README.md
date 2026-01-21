@@ -17,7 +17,7 @@
 The framework is shown below.
 
 <p align="center">
-  <img src="figure/AlphaCFG.png" alt="AlphaCFG Framework" width="900">
+  <img src="figure/AlphaCFG.png" alt="AlphaCFG Framework" width="1500">
 </p>
 
 
