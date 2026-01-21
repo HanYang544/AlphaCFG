@@ -101,7 +101,7 @@ This project includes several representative baseline methods for comparison.
 
 ## Result
 
-The result of backtest is shown below. ![Result](figure/Result.svg)
+The result of backtest is shown below. ![Result](figure/Result.png)
 
 ## Notes
 
