@@ -95,6 +95,7 @@ This project includes several representative baseline methods for comparison.
   cd alpha-ML
   python main.py
   ```
+![Result](Result.png)
 
 ## Notes
 
