@@ -4,11 +4,11 @@
 
 ```
 .
-├── alpha-CFG-S/             # Syntax-validity processing engine
-├── alpha-CFG-SS/            # + Semantic-validity processing engine
-├── alpha-CFG-SSL/           # + Constraint-optimized processing engine
-├── alpha-RPN/               # Reverse Polish Notation calculator
-├── alpha-ML/               # Baseline methods that directly use machine learning techniques to predict stocks
+├── CFG-Syn/             # Syntax-validity processing engine
+├── CFG-Sem/             # + Semantic-validity processing engine
+├── CFG-Sem-k/           # + Constraint-optimized processing engine
+├── RPN/                 # Reverse Polish Notation calculator
+├── ML/                  # Baseline methods that directly use machine learning techniques to predict stock returns
 ├── requirements.txt   # Project dependencies
 └── README.md          # Project documentation
 ```
@@ -75,7 +75,7 @@ Alternatively, you may leverage [qlib](https://github.com/microsoft/qlib) for mo
 To execute the integrated module pool, just enter the folder directory of different projects. For example:
 
 ```bash
-cd alpha-CFG-S
+cd CFG-Sem-k
 ```
 
 and run:
@@ -92,10 +92,10 @@ This project includes several representative baseline methods for comparison.
 
 - **AlphaQCM**: [AlphaQCM](https://github.com/ZhuZhouFan/AlphaQCM)
 
-- **Alpha-ML**: Pure machine learning baselines that directly predict stock returns without explicit symbolic alpha construction.  
+- **ML**: Pure machine learning baselines that directly predict stock returns without explicit symbolic alpha construction.  
   To run these baselines, execute:
   ```bash
-  cd alpha-ML
+  cd ML
   python main.py
   ```
 
