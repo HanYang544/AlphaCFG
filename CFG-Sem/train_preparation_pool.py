@@ -114,7 +114,7 @@ def compute_policy_loss(action_outputs, target_policy, classification_loss_fn, d
         target_distribution /= target_distribution.sum()
 
     # Apply softmax to the network output
-    output_distribution = torch.softmax(action_outputs, dim=0)
+    output_distribution = action_outputs / (action_outputs.sum() + 1e-10)
 
     # Calculate KL divergence
     loss = classification_loss_fn(torch.log(output_distribution + 1e-10), target_distribution)
@@ -167,10 +167,9 @@ def train_policy_net(policy_net, optimizer, replay_buffer, num_batches, batch_si
                 continue
 
             # Convert to differentiable vector
-            action_outputs = torch.tensor(
-                [item['prob'] for item in action_outputs],
-                dtype=torch.float32, device=device, requires_grad=True
-            )
+            action_outputs = torch.stack(
+                [item['prob'] for item in action_outputs]
+            ).to(device)
 
             loss = compute_policy_loss(action_outputs, target_policy, classification_loss_fn, device)
             policy_loss = policy_loss + loss
