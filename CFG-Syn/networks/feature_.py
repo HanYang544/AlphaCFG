@@ -207,12 +207,12 @@ def tree_to_dgl_graph(tree):
             edges_dst.append(idx)        # Parent node
         return idx
 
-    traverse(tree)
+    root_idx = traverse(tree)
     # Create graph using the latest DGL API
     src = torch.tensor(edges_src, dtype=torch.int64)
     dst = torch.tensor(edges_dst, dtype=torch.int64)
     g = dgl.graph((src, dst), num_nodes=len(nodes))
-    return g, nodes
+    return g, nodes, root_idx
 
 
 # Step 5: Define TreeLSTMCell
@@ -384,9 +384,12 @@ class TreeLSTMModel(nn.Module):
 
 
         # Propagate TreeLSTM
-        graph.update_all(message_func=self.cell.message_func,
-                        reduce_func=self.cell.reduce_func,
-                        apply_node_func=self.cell.apply_node_func)
+        dgl.prop_nodes_topo(
+            graph,
+            message_func=self.cell.message_func,
+            reduce_func=self.cell.reduce_func,
+            apply_node_func=self.cell.apply_node_func
+        )
 
         # Get hidden state
         h_out = self.dropout(graph.ndata['h'])
@@ -409,7 +412,7 @@ class FeatureExtractor(nn.Module):
     def forward(self, expression: str) -> torch.Tensor:
         # Expression -> Tree -> DGL graph
         tree = parse_expression(expression, self.token_map)
-        graph, nodes = tree_to_dgl_graph(tree)
+        graph, nodes, root_idx = tree_to_dgl_graph(tree)
         graph = graph.to(next(self.parameters()).device)
 
         # Node features
@@ -422,5 +425,5 @@ class FeatureExtractor(nn.Module):
         h = torch.zeros(graph.number_of_nodes(), self.model.h_size).to(graph.device)
         c = torch.zeros(graph.number_of_nodes(), self.model.h_size).to(graph.device)
         feature = self.model(graph, wordid, None, h, c)
-        root_h = feature[-1].unsqueeze(0)  # [1, h_size]
+        root_h = feature[root_idx].unsqueeze(0)  # [1, h_size]
         return self.fc(root_h)
