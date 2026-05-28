@@ -97,7 +97,7 @@ class PolicyNetwork(nn.Module):
         # If only 1 category remains, cat_probs.shape may be (1,) or even a scalar
         if cat_probs.dim() == 0:
             # Only 1 category, cat_probs.item() must be 1.0 (since softmax only has one value)
-            only_cat_p = cat_probs.item()
+            only_cat_p = cat_probs
 
             # Get the corresponding action_head for this category
             cat_name = ENV_CATEGORIES[0]
@@ -111,25 +111,27 @@ class PolicyNetwork(nn.Module):
                     valid_dict[cat].append(val)
 
             sub_prob_list = []
-            cat_sub_total = 0.0
+            cat_sub_total = torch.tensor(0.0, device=h.device)
             for sub_idx, sub_val in enumerate(ENV_ACTIONS[cat_name]):
-                raw_sub_p = sub_probs[sub_idx].item()
+                raw_sub_p = sub_probs[sub_idx]
                 if sub_val in valid_dict[cat_name]:
                     sub_p = only_cat_p * raw_sub_p  # Only 1 category => cat_p = only_cat_p
                     sub_prob_list.append((sub_val, sub_p))
-                    cat_sub_total += sub_p
+                    cat_sub_total = cat_sub_total + sub_p
 
             # Normalize the probabilities
-            if cat_sub_total < 1e-12:
+            if cat_sub_total.detach().item() < 1e-12:
                 return []
             masked_output = []
             for (v, p) in sub_prob_list:
+                prob = p / cat_sub_total
                 masked_output.append({
                     "category": cat_name,
                     "action": v,
-                    "prob": p / cat_sub_total
+                    "prob": prob,
+                    "prob_value": prob.detach().item()
                 })
-            masked_output.sort(key=lambda x: x["prob"], reverse=True)
+            masked_output.sort(key=lambda x: x["prob_value"], reverse=True)
             return masked_output
 
         else:
@@ -146,38 +148,40 @@ class PolicyNetwork(nn.Module):
                     valid_dict[cat].append(val)
 
             masked_output = []
-            total_prob = 0.0
+            total_prob = torch.tensor(0.0, device=h.device)
 
             # Iterate through all categories
             for cat_idx, cat_name in enumerate(ENV_CATEGORIES):
-                cat_p = cat_probs[cat_idx].item()
+                cat_p = cat_probs[cat_idx]
                 if len(valid_dict[cat_name]) == 0:
                     continue  # No valid actions in this category
                 sub_probs = subaction_probs[cat_name]  # tensor (n_subactions,)
-                cat_sub_total = 0.0
+                cat_sub_total = torch.tensor(0.0, device=h.device)
                 sub_prob_list = []
                 for sub_idx, sub_val in enumerate(ENV_ACTIONS[cat_name]):
-                    raw_sub_p = sub_probs[sub_idx].item()
+                    raw_sub_p = sub_probs[sub_idx]
                     if sub_val in valid_dict[cat_name]:
                         sub_p = cat_p * raw_sub_p
                         sub_prob_list.append((sub_val, sub_p))
-                        cat_sub_total += sub_p
-                if cat_sub_total > 1e-12:
+                        cat_sub_total = cat_sub_total + sub_p
+                if cat_sub_total.detach().item() > 1e-12:
                     for (v, p) in sub_prob_list:
                         masked_output.append({
                             "category": cat_name,
                             "action": v,
                             "prob": p
                         })
-                    total_prob += cat_sub_total
+                    total_prob = total_prob + cat_sub_total
 
             # Normalize probabilities
-            if total_prob < 1e-12:
+            if total_prob.detach().item() < 1e-12:
                 return []
             for item in masked_output:
-                item["prob"] = item["prob"] / total_prob
+                prob = item["prob"] / total_prob
+                item["prob"] = prob
+                item["prob_value"] = prob.detach().item()
 
-            masked_output.sort(key=lambda x: x["prob"], reverse=True)
+            masked_output.sort(key=lambda x: x["prob_value"], reverse=True)
             return masked_output
 
 
@@ -203,5 +207,3 @@ def evaluate_policy_network(expression_tokens, policy_net, possible_actions=None
     action_outputs = policy_net(src, possible_actions=possible_actions)
         
     return action_outputs
-
-
