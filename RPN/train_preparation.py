@@ -103,7 +103,7 @@ def compute_policy_loss(
       target_policy:  shape = [n_actions], the target distribution given by MCTS (matching the order of action_outputs)
     """
     # Apply softmax to the prediction
-    pred_dist = torch.softmax(action_outputs, dim=0)
+    pred_dist = action_outputs / (action_outputs.sum() + 1e-10)
 
     # Ensure target_policy is a valid probability distribution
     sum_tp = torch.sum(target_policy)
@@ -175,12 +175,9 @@ def train_policy_net(policy_net, optimizer, replay_buffer, num_batches, batch_si
                 continue
 
             # Convert pred_outputs_list to a tensor [n_actions_pred]
-            pred_prob_vector = [item["prob"] for item in pred_outputs_list]
-            pred_tensor = torch.tensor(
-                pred_prob_vector,
-                dtype=torch.float32, device=device,
-                requires_grad=True
-            )
+            pred_tensor = torch.stack(
+                [item['prob'] for item in pred_outputs_list]
+            ).to(device)
 
             # Align target_policy_list to the same order as pred_outputs_list
             target_dict = {
