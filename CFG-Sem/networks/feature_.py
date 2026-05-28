@@ -64,9 +64,9 @@ class TokenMap:
             '$vwap': 44,
 
             # ========== 6) Special tokens ========== 
-            'J': 45,         # Non-terminal E
-            'Q': 46,         # Non-terminal Q
-            'num': 47,       # Placeholder for numbers (num_range)
+            'J': 45,         # Non-terminal symbol E
+            'Q': 46,         # Non-terminal symbol Q
+            'num': 47,       # Used for placeholder numbers (num_range)
 
             # ========== 7) Constants ========== 
             '-0.1': 48,
@@ -133,33 +133,32 @@ class TokenMap:
 
     def get_word_id(self, token):
         """
-        Return the ID of the token, default is 0.
+        Return the ID of the token, defaulting to 0.
         """
         return self.token_map.get(token, 0)
 
     def get_arity(self, operator):
         """
-        Return the arity (number of parameters) of the operator, default is 0 (undefined arity).
+        Return the number of parameters for the operator, defaulting to 0 (undefined arity).
         """
         return self.operator_arities.get(operator, 0)
 
 
-
-# Step 2: Define expression tree nodes
+# Step 2: Define expression tree node
 class ExpressionTree:
     def __init__(self, value=None, children=None, is_operator=False):
         """
         Initialize an expression tree node
         :param value: The value of the node, e.g., 'Add', '$high', '0.05', etc.
         :param children: List of child nodes
-        :param is_operator: Whether it is an operator node
+        :param is_operator: Whether the node is an operator node
         """
         self.value = value
         self.children = children if children is not None else []
         self.is_operator = is_operator
 
     def is_leaf(self):
-        """Check if it is a leaf node"""
+        """Check if the node is a leaf node"""
         return len(self.children) == 0
 
     def __repr__(self):
@@ -215,7 +214,7 @@ def tree_to_dgl_graph(tree):
 
     def traverse(node):
         """
-        Recursively traverse the tree to build nodes and edges.
+        Recursively traverse the tree and build nodes and edges.
         :param node: Current node
         :return: Index of the current node
         """
@@ -227,12 +226,12 @@ def tree_to_dgl_graph(tree):
             edges_dst.append(idx)        # Parent node
         return idx
 
-    traverse(tree)
+    root_idx = traverse(tree)
     # Create graph using the latest DGL API
     src = torch.tensor(edges_src, dtype=torch.int64)
     dst = torch.tensor(edges_dst, dtype=torch.int64)
     g = dgl.graph((src, dst), num_nodes=len(nodes))
-    return g, nodes
+    return g, nodes, root_idx
 
 
 # Step 5: Define TreeLSTMCell
@@ -248,7 +247,7 @@ class TreeLSTMCell(nn.Module):
         self.h_size = h_size
         self.max_children = max_children
 
-        # Weights for input gate, output gate, and update gate
+        # Weights for input, output, and update gates
         self.W_iou = nn.Linear(x_size, 3 * h_size, bias=True)
         self.U_iou = nn.Linear(max_children * h_size, 3 * h_size, bias=False)
 
@@ -285,7 +284,7 @@ class TreeLSTMCell(nn.Module):
         # Identify the operator token id of the current node
         op_ids = nodes.data['op']  # shape: (batch_size,)
 
-       # Define special aggregation operator id sets
+        # Define special aggregation operator id sets
         mean_ops = {5, 10, 18, 20}  # Add1, Mul1, Greater1, Less1
         cov_corr_ops = {37, 38}     # Cov, Corr
 
@@ -336,34 +335,33 @@ class TreeLSTMCell(nn.Module):
 
         return {'iou_child': iou_child, 'c': c}
 
-
     def apply_node_func(self, nodes):
         """
-        Apply function, calculate input gate, output gate, and update gate, and update hidden state and cell state
+        Apply function, calculate input, output, and update gates, and update hidden and cell states
         :param nodes: DGL nodes
         :return: Dictionary containing updated 'h' and 'c'
         """
-        # If the node data doesn't have 'iou_child', it means the node is a leaf node, set default value to 0
+        # If the node data doesn't have 'iou_child', it's a leaf node, set default to 0
         if 'iou_child' in nodes.data:
             iou_child = nodes.data['iou_child']
         else:
-            # Here construct a zero tensor based on the shape of x, shape is (batch_size, 3 * h_size)
+            # Construct a zero tensor based on x's shape, shape: (batch_size, 3 * h_size)
             x = nodes.data['x']
             iou_child = torch.zeros(x.size(0), 3 * self.h_size, device=x.device)
 
-        # Get the embedding vector x of the node
+        # Get the node's embedding vector x
         x = nodes.data['x']  # (batch_size, x_size)
 
         # Calculate W_iou(x)
         iou_node = self.W_iou(x)  # (batch_size, 3 * h_size)
 
-        # Calculate the final iou
+        # Calculate final iou
         iou = iou_node + iou_child  # (batch_size, 3 * h_size)
 
         # Split i, o, u
         i, o, u = torch.chunk(iou, 3, dim=1)  # (batch_size, h_size) each
 
-        # Calculate gating
+        # Calculate gates
         i = torch.sigmoid(i)
         o = torch.sigmoid(o)
         u = torch.tanh(u)
@@ -399,10 +397,10 @@ class TreeLSTMModel(nn.Module):
 
     def forward(self, graph, wordid, mask, h, c):
         """
-        Forward propagation
+        Forward pass
         :param graph: DGL graph
         :param wordid: Vocabulary IDs of nodes
-        :param mask: Node mask (currently unused)
+        :param mask: Node mask (not used currently)
         :param h: Initial hidden state
         :param c: Initial cell state
         :return: h_out (hidden state feature vector)
@@ -419,11 +417,14 @@ class TreeLSTMModel(nn.Module):
         graph.ndata['x'] = embeds
         graph.ndata['op'] = wordid  # Store the token id here
 
-
         # Propagate TreeLSTM
-        graph.update_all(message_func=self.cell.message_func,
-                        reduce_func=self.cell.reduce_func,
-                        apply_node_func=self.cell.apply_node_func)
+        dgl.prop_nodes_topo(
+            graph,
+            message_func=self.cell.message_func,
+            reduce_func=self.cell.reduce_func,
+            apply_node_func=self.cell.apply_node_func
+        )
+
 
         # Get hidden state
         h_out = self.dropout(graph.ndata['h'])
@@ -446,7 +447,7 @@ class FeatureExtractor(nn.Module):
     def forward(self, expression: str) -> torch.Tensor:
         # Expression -> Tree -> DGL graph
         tree = parse_expression(expression, self.token_map)
-        graph, nodes = tree_to_dgl_graph(tree)
+        graph, nodes, root_idx = tree_to_dgl_graph(tree)
         graph = graph.to(next(self.parameters()).device)
 
         # Node features
@@ -455,9 +456,9 @@ class FeatureExtractor(nn.Module):
             dtype=torch.long
         ).to(graph.device)
 
-        # Forward propagation
+        # Forward pass
         h = torch.zeros(graph.number_of_nodes(), self.model.h_size).to(graph.device)
         c = torch.zeros(graph.number_of_nodes(), self.model.h_size).to(graph.device)
         feature = self.model(graph, wordid, None, h, c)
-        root_h = feature[-1].unsqueeze(0)  # [1, h_size]
+        root_h = feature[root_idx].unsqueeze(0)  # [1, h_size]
         return self.fc(root_h)
