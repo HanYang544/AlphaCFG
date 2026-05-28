@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from env.token_v import create_token_map, parse_expression_to_tokens, get_first_token
 from networks.feature_ import FeatureExtractor 
-
+ 
 # Category name mapping
 CATEGORY_MAP = {
     0: 'Vari',
