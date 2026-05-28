@@ -92,7 +92,7 @@ class PolicyNetwork(nn.Module):
             # Calculate final probability for each action
             for j, action_prob in enumerate(action_probs):
                 action_value = ACTION_MAP[category_name][j]
-                prob = category_prob.item() * action_prob.item()  # Product of category probability and action probability
+                prob = category_prob * action_prob  # Product of category probability and action probability
                 action_outputs.append({
                     'category': category_name,
                     'action': action_value,
