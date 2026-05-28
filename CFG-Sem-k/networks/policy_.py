@@ -83,18 +83,24 @@ class PolicyNetwork(nn.Module):
         category_probs = self.softmax(category_logits).squeeze(0)
 
         # Apply category mask
-        for i, category_name in CATEGORY_MAP.items():
-            if category_name in action_mask and action_mask[category_name] == 0:
-                category_probs[i] = 0  # Force disabled category probabilities to 0
+        category_mask = torch.tensor(
+            [
+                float(action_mask.get(CATEGORY_MAP[i], 1))
+                for i in range(len(CATEGORY_MAP))
+            ],
+            dtype=category_probs.dtype,
+            device=category_probs.device
+        )
+        category_probs = category_probs * category_mask
 
         # Normalize probabilities
-        category_probs = category_probs / category_probs.sum() if category_probs.sum() > 0 else category_probs
+        category_probs = category_probs / (category_probs.sum() + 1e-10)
 
         # Calculate action probabilities for each category
         action_outputs = []
         for i, category_prob in enumerate(category_probs):
             category_name = CATEGORY_MAP.get(i)
-            if category_name is None or category_prob == 0:
+            if category_name is None or action_mask.get(category_name, 1) == 0:
                 continue  # Skip if category is masked
 
             # Get action logits
@@ -132,14 +138,40 @@ def evaluate_policy_network(expression: str, policy_net, continue_out_game) -> l
             return None
         
         # Call the policy network
-        action_outputs = policy_net(expression, first_token=first_token, continue_out_game=continue_out_game)
-
+        with torch.no_grad():
+            action_outputs = policy_net(
+                expression,
+                first_token=first_token,
+                continue_out_game=continue_out_game
+            )
+            
         # Ensure valid action outputs are returned
         if not action_outputs:
             print(f"evaluate_policy_network returned empty action outputs, expression: {expression}")
             return []
 
-        return action_outputs
+        # Convert tensor probabilities to Python floats for MCTS.
+        clean_outputs = []
+        for item in action_outputs:
+            prob = item['prob']
+
+            if isinstance(prob, torch.Tensor):
+                prob = prob.detach().cpu()
+
+                if prob.numel() != 1:
+                    print("Invalid prior_prob shape in evaluate_policy_network:", prob.shape)
+                    print("item:", item)
+                    continue
+
+                prob = prob.item()
+
+            clean_outputs.append({
+                'category': item['category'],
+                'action': item['action'],
+                'prob': float(prob)
+            })
+
+        return clean_outputs
 
     except Exception as e:
         print(f"evaluate_policy_network encountered an exception: {e}")
