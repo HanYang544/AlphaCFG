@@ -47,7 +47,7 @@ Example:
   --variant cfg-sem-k \
   --mode mask \
   --network lstm \
-  --mask-expression "Mul1 Rank CSRank Q num Q"
+  --mask-expression "Mul1 Rank Q num Q"
 ```
 
 ## Reproducibility

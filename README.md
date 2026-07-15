@@ -307,7 +307,7 @@ Pool mode maintains a linear alpha ensemble. The current training reward is:
   --variant cfg-sem-k \
   --mode mask \
   --network lstm \
-  --mask-expression "Mul1 Q Rank CSRank Q num Q" \
+  --mask-expression "Mul1 Rank Q num Q" \
   --device cuda:0
 ```
 

@@ -100,7 +100,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--mask-expression",
         default="",
-        help="Initial non-terminal prefix expression for mask mode, e.g. 'Mul1 Q Rank CSRank Q num'.",
+        help="Initial leftmost-derivation state with terminals first, e.g. 'Mul1 Rank Q num Q'.",
     )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--pool-capacity", type=int, default=10)
