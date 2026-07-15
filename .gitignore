@@ -1,0 +1,11 @@
+.venv/
+.venv_broken_*/
+__pycache__/
+*.py[cod]
+/data/
+/outputs/
+/logs/
+*.pt
+*.pth
+*.ckpt
+*.pkl

@@ -1,0 +1,84 @@
+"""Verify same-seed initialization produces the same first loss."""
+
+from __future__ import annotations
+
+import argparse
+import importlib
+import json
+import sys
+from pathlib import Path
+
+import torch
+import torch.nn as nn
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from alphacfg.experiment_context import experiment_import_context
+from alphacfg.runtime import OUTPUT_ROOT, write_json
+from alphacfg.seeding import seed_everything
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--network", type=str, default="lstm")
+    parser.add_argument("--device", type=str, default="cpu")
+    return parser.parse_args()
+
+
+def clear_network_modules() -> None:
+    for name in list(sys.modules):
+        if name == "networks" or name.startswith("networks."):
+            del sys.modules[name]
+
+
+def first_loss(seed: int, network: str, device: torch.device) -> float:
+    seed_everything(seed, deterministic=True)
+    with experiment_import_context("cfg-sem-k", network):
+        clear_network_modules()
+        from env.token_v import create_token_map, get_first_token, parse_expression_to_tokens
+
+        feature_mod = importlib.import_module("networks.feature_")
+        policy_mod = importlib.import_module("networks.policy_")
+        value_mod = importlib.import_module("networks.value_")
+
+        embed_dim = 64
+        token_map = create_token_map()
+        feature = feature_mod.FeatureExtractor(embed_dim=embed_dim, h_size=embed_dim, dropout=0.0).to(device)
+        policy = policy_mod.PolicyNetwork(feature_extractor=feature, embed_dim=embed_dim).to(device)
+        value = value_mod.ValueNetwork(feature_extractor=feature, embed_dim=embed_dim).to(device)
+        expression = "J"
+        tokens = parse_expression_to_tokens(expression, token_map)
+        first_token = get_first_token(tokens, token_map)
+        token_tensor = torch.tensor(tokens, dtype=torch.long, device=device).unsqueeze(0)
+        model_input = expression if network == "treelstm" else token_tensor
+        policy_outputs = policy(model_input, first_token=first_token)
+        probs = torch.stack([item["prob"] for item in policy_outputs])
+        policy_loss = -torch.log(probs[0] + 1e-10)
+        value_loss = nn.MSELoss()(value(model_input).squeeze().unsqueeze(0), torch.tensor([0.25], device=device))
+        return float((policy_loss + value_loss).detach().cpu())
+
+
+def main() -> None:
+    args = parse_args()
+    device = torch.device(args.device)
+    loss_a = first_loss(args.seed, args.network, device)
+    loss_b = first_loss(args.seed, args.network, device)
+    payload = {
+        "seed": args.seed,
+        "network": args.network,
+        "loss_a": loss_a,
+        "loss_b": loss_b,
+        "same": abs(loss_a - loss_b) < 1e-12,
+    }
+    out_dir = OUTPUT_ROOT / "cfg-sem-k" / "seed_checks"
+    write_json(out_dir / f"{args.network}_seed{args.seed}.json", payload)
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if not payload["same"]:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
