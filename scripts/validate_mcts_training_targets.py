@@ -277,27 +277,27 @@ def write_report(path: Path, payload: dict) -> None:
     policy = payload["policy_fit"]
     value = payload["value_fit"]
     lines = [
-        "# MCTS 与网络训练目标验证",
+        "# MCTS and Network Training Target Validation",
         "",
-        "## Policy 拟合 MCTS 分布",
+        "## Policy Fit to the MCTS Distribution",
         "",
-        f"- 训练集 KL：{policy['train_before']['kl']:.6g} -> {policy['train_after']['kl']:.6g}",
-        f"- 留出集 KL：{policy['holdout_before']['kl']:.6g} -> {policy['holdout_after']['kl']:.6g}",
+        f"- Training KL: {policy['train_before']['kl']:.6g} -> {policy['train_after']['kl']:.6g}",
+        f"- Holdout KL: {policy['holdout_before']['kl']:.6g} -> {policy['holdout_after']['kl']:.6g}",
         "",
         (
-            "## Value 拟合相似度惩罚奖励"
+            "## Value Fit to the Similarity-Penalized Reward"
             if payload["config"]["reward_mode"] == "pool"
-            else "## Value 拟合单因子 abs(IC) 奖励"
+            else "## Value Fit to the Single-Factor abs(IC) Reward"
         ),
         "",
-        f"- 训练集 MSE：{value['train_before']['mse']:.6g} -> {value['train_after']['mse']:.6g}",
-        f"- 训练集相关：{value['train_before']['correlation']:.6g} -> {value['train_after']['correlation']:.6g}",
-        f"- 留出集 MSE：{value['holdout_before']['mse']:.6g} -> {value['holdout_after']['mse']:.6g}",
-        f"- 留出集相关：{value['holdout_before']['correlation']:.6g} -> {value['holdout_after']['correlation']:.6g}",
+        f"- Training MSE: {value['train_before']['mse']:.6g} -> {value['train_after']['mse']:.6g}",
+        f"- Training correlation: {value['train_before']['correlation']:.6g} -> {value['train_after']['correlation']:.6g}",
+        f"- Holdout MSE: {value['holdout_before']['mse']:.6g} -> {value['holdout_after']['mse']:.6g}",
+        f"- Holdout correlation: {value['holdout_before']['correlation']:.6g} -> {value['holdout_after']['correlation']:.6g}",
         "",
-        "## MCTS 模拟次数比较",
+        "## MCTS Simulation Budget Comparison",
         "",
-        "| 模拟次数 | 完成率 | 接受率 | 平均单因子 |IC| | 平均 Pool IC 增量 | 平均轨迹奖励 |",
+        "| Simulations | Completion Rate | Acceptance Rate | Mean Single-Factor abs(IC) | Mean Pool IC Gain | Mean Trajectory Reward |",
         "| ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for row in payload["budget_summary"]:
@@ -323,15 +323,15 @@ def write_report(path: Path, payload: dict) -> None:
     )
     lines.extend([
         "",
-        "## 结论",
+        "## Conclusions",
         "",
-        f"- Policy 拟合 MCTS 动作分布：{'通过' if policy_confirmed else '未通过'}。",
-        f"- Value 拟合训练轨迹奖励：{'通过' if value_train_fit else '未通过'}。",
-        f"- Value 泛化到留出轨迹：{'通过' if value_generalized else '未通过'}。",
-        f"- 模拟次数增加带来单调改善：{'通过' if simulation_monotonic else '未通过'}。",
+        f"- Policy fits the MCTS action distribution: {'PASS' if policy_confirmed else 'FAIL'}.",
+        f"- Value fits the training trajectory rewards: {'PASS' if value_train_fit else 'FAIL'}.",
+        f"- Value generalizes to holdout trajectories: {'PASS' if value_generalized else 'FAIL'}.",
+        f"- More simulations produce monotonic improvement: {'PASS' if simulation_monotonic else 'FAIL'}.",
         "",
-        "MCTS 搜索内部依赖 Value 预测，而不是对每个叶节点即时计算真实 IC。",
-        "因此更多模拟只能更充分地优化当前网络估值；Value 泛化不足时，不保证真实因子质量单调提高。",
+        "MCTS search relies on value predictions instead of calculating the true IC at every leaf.",
+        "More simulations therefore optimize the current network estimate more thoroughly; they do not guarantee monotonically better factors when value generalization is weak.",
     ])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

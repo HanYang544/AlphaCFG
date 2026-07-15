@@ -383,7 +383,7 @@ def parallel_self_play(variant: str, args, policy_net, value_net, mcts_mod, devi
 
 
 def _snapshot_pool(pool) -> dict[str, Any]:
-    """保存 pool 的可回滚状态，用于拒绝让组合 IC 下降的新因子。"""
+    """Save a restorable pool state before evaluating a new factor."""
     return {
         "size": pool.size,
         "exprs": list(pool.exprs),
@@ -400,7 +400,7 @@ def _snapshot_pool(pool) -> dict[str, Any]:
 
 
 def _restore_pool(pool, snapshot: dict[str, Any], eval_cnt: int | None = None) -> None:
-    """恢复 pool 状态；eval_cnt 可选择保留尝试次数。"""
+    """Restore a pool snapshot, optionally preserving the evaluation count."""
     pool.size = snapshot["size"]
     pool.exprs = list(snapshot["exprs"])
     pool.single_ics = snapshot["single_ics"].copy()

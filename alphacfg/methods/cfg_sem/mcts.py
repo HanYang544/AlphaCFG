@@ -16,7 +16,7 @@ from alphacfg.mcts_core import EvaluationItem, MCTSMethods, build_mcts_classes
 
 
 class CFGSemMethods(MCTSMethods):
-    """CFG-Sem 的 MCTS 方法：语义 CFG 字符串状态。"""
+    """MCTS adapter for CFG-Sem semantic CFG string states."""
 
     @classmethod
     def initial_state(cls):

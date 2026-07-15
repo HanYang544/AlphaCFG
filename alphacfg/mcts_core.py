@@ -13,7 +13,7 @@ Action = Tuple[str, Any]
 
 
 def apply_dirichlet_noise(root, epsilon: float = 0.25, alpha: float = 0.03) -> None:
-    """给根节点子动作加入 Dirichlet 噪声，增加自博弈探索性。"""
+    """Add Dirichlet noise to root actions to encourage self-play exploration."""
     if not root.childrens:
         return
     noise = np.random.dirichlet([alpha] * len(root.childrens))
@@ -23,14 +23,14 @@ def apply_dirichlet_noise(root, epsilon: float = 0.25, alpha: float = 0.03) -> N
 
 @dataclass
 class EvaluationItem:
-    """送入 policy/value 网络前的统一载体。"""
+    """Common container passed to the policy and value networks."""
 
     state: Any
     continue_out_game: Optional[int] = None
 
 
 class MCTSMethods:
-    """不同 grammar/state transition 只需要实现这一层方法。"""
+    """Interface implemented by each grammar and state-transition variant."""
 
     max_expression_length = 10
     default_continue_out_game = 3
@@ -65,7 +65,7 @@ class MCTSMethods:
 
 
 class Node:
-    """MCTS 树节点，和具体文法无关。"""
+    """Grammar-independent MCTS tree node."""
 
     methods: Type[MCTSMethods] = MCTSMethods
 
@@ -90,7 +90,7 @@ class Node:
         self.continue_out_game = continue_out_game
 
     def update(self, value: float) -> None:
-        """回传一次模拟结果，更新访问次数和平均价值。"""
+        """Backpropagate one simulation result and update the mean value."""
         self.n += 1
         self.w += float(value)
         self.q = self.w / self.n
@@ -99,7 +99,7 @@ class Node:
         return len(self.childrens) == 0
 
     def expand(self, probas: Optional[Iterable[Dict[str, Any]]]) -> None:
-        """根据 policy 网络输出展开合法子节点。"""
+        """Expand legal child nodes from the policy network output."""
         if not probas:
             return
         for action_output in probas:
@@ -132,7 +132,7 @@ class Node:
 
 
 class EvaluatorThread(threading.Thread):
-    """把多个叶节点攒成 batch 后调用具体方法的网络评估逻辑。"""
+    """Batch leaf nodes and invoke the variant-specific network evaluator."""
 
     def __init__(
         self,
@@ -177,7 +177,7 @@ class EvaluatorThread(threading.Thread):
 
 
 class SearchThread(threading.Thread):
-    """执行一次 MCTS simulation。"""
+    """Run one MCTS simulation."""
 
     def __init__(
         self,
@@ -254,7 +254,7 @@ class SearchThread(threading.Thread):
 
 
 class MCTS:
-    """公共 MCTS 搜索引擎；具体方法由 methods 注入。"""
+    """Shared MCTS engine configured through an injected methods adapter."""
 
     NodeClass = Node
     methods: Type[MCTSMethods] = MCTSMethods
@@ -365,7 +365,7 @@ class MCTS:
 
 
 def build_mcts_classes(methods: Type[MCTSMethods]):
-    """为老目录生成兼容的 Node/MCTS 类。"""
+    """Build variant-specific Node and MCTS classes for legacy entry points."""
 
     class VariantNode(Node):
         pass

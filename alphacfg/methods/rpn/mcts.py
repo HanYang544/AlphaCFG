@@ -17,7 +17,7 @@ from alphacfg.mcts_core import EvaluationItem, MCTSMethods, build_mcts_classes
 
 
 class RPNMethods(MCTSMethods):
-    """RPN 的 MCTS 方法：栈式 ExpressionBuilder 状态转移。"""
+    """MCTS adapter for stack-based RPN ExpressionBuilder transitions."""
 
     @classmethod
     def initial_state(cls):

@@ -16,7 +16,7 @@ from alphacfg.mcts_core import EvaluationItem, MCTSMethods, build_mcts_classes
 
 
 class CFGSynMethods(MCTSMethods):
-    """CFG-Syn 的 MCTS 方法：语法 CFG 字符串状态。"""
+    """MCTS adapter for CFG-Syn syntactic CFG string states."""
 
     @classmethod
     def initial_state(cls):

@@ -16,7 +16,7 @@ from alphacfg.mcts_core import EvaluationItem, MCTSMethods, build_mcts_classes
 
 
 class CFGSemKMethods(MCTSMethods):
-    """CFG-Sem-k 的 MCTS 方法：CFG 文法状态 + 剩余展开步数约束。"""
+    """MCTS adapter for CFG-Sem-k states with an expansion-step budget."""
 
     max_expression_length = 10
     default_continue_out_game = 3
