@@ -325,7 +325,7 @@ export ALPHACFG_QLIB_REGION=us
   --train-start 2010-01-01 \
   --train-end 2017-12-31 \
   --valid-start 2018-01-01 \
-  --valid-end 2019-12-31 \
+  --valid-end 2020-12-31 \
   --test-start 2021-01-01 \
   --test-end 2024-12-31 \
   --device cuda:0
