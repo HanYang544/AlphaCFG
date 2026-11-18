@@ -126,7 +126,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--train-start", default="2010-01-01")
     parser.add_argument("--train-end", default="2017-12-31")
     parser.add_argument("--valid-start", default="2018-01-01")
-    parser.add_argument("--valid-end", default="2019-12-31")
+    parser.add_argument("--valid-end", default="2020-12-31")
     parser.add_argument("--test-start", default="2021-01-01")
     parser.add_argument("--test-end", default="2024-12-31")
     parser.add_argument("--target-horizon", type=int, default=20)
